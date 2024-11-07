@@ -1,6 +1,6 @@
 import 'dotenv/config'
-import { runLLm } from './src/llm.ts'
-import { getMessages, addMessages } from './src/memory.ts'
+import { runAgent } from './src/agent.ts'
+import { z } from 'zod'
 
 const userMessage = process.argv[2];
 
@@ -9,16 +9,14 @@ if (!userMessage) {
   process.exit(1)
 }
 
-await addMessages([{ role: 'user', content: userMessage }]);
+const weatherTool = {
+  name: 'get_weather',
+  parameters: z.object({}),
+};
 
-const messages = await getMessages();
+const getWeather = () => 'Freezing cold, -1 outside';
 
-console.log(messages)
+const response = await runAgent({ userMessage, tools: [weatherTool] });
 
-const response = await runLLm({
-  messages,
-});
-
-await addMessages([{ role: 'assistant', content: response }]);
-
-console.log(response);
+console.log('Response: \n');
+console.log(JSON.stringify(response));
