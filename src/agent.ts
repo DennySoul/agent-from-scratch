@@ -1,10 +1,12 @@
-import { addMessages, getMessages } from './memory.ts'
+import { addMessages, getMessages, saveToolResponse } from './memory.ts'
 import { logMessage, showLoader } from './ui.ts'
 import { runLLm } from './llm.ts'
+import { z } from 'zod'
+import { runTool } from './toolRunner.ts'
 
-export type Tools = any[];
+export type Tools = { name: string, parameters: z.AnyZodObject, }[];
 
-export const runAgent = async ({ userMessage, tools }: { userMessage: string, tools: Tools }) => {
+export const runAgent = async ({ runs = 10, userMessage, tools }: { runs: number, userMessage: string, tools: Tools }) => {
     logMessage({
       role: 'user',
       content: userMessage
@@ -18,27 +20,42 @@ export const runAgent = async ({ userMessage, tools }: { userMessage: string, to
     }
   ]);
 
-  const loader = showLoader('Thinking... \n');
+  console.log('Thinking... \n');
 
-  const history = await getMessages();
+  let runsCount = 0;
 
-  const result = await runLLm({ messages: history, tools });
+  while (runsCount < runs) {
+    const history = await getMessages();
+    const result = await runLLm({ messages: history, tools });
 
-  if (result === undefined) {
-    console.log('LLm query returned nothing')
-    return;
+    runsCount++;
+
+    if (result === undefined) {
+      console.log('LLm query returned nothing')
+      return;
+    }
+
+    await addMessages([result]);
+
+    if (result.content) {
+      // final answer
+      logMessage(result);
+
+      runsCount = runs;
+    }
+
+    if (result.tool_calls) {
+      const toolCall = result.tool_calls[0];
+
+      console.info(`Executing tool: ${toolCall.function.name}`);
+
+      const response = await runTool(toolCall, userMessage);
+
+      await saveToolResponse(response, toolCall.id);
+
+      console.info(`Done with: ${toolCall.function.name}`);
+    }
   }
-
-  if (result.tool_calls) {
-    console.log('Tools list: \n');
-
-    console.log(result.tool_calls, '\n');
-  }
-
-  await addMessages([result]);
-
-  loader.stop();
 
   return getMessages();
-
 }

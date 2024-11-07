@@ -48,3 +48,11 @@ export const addMessages = async (messages: AIMessage[]) => {
 
   await db.write();
 };
+
+export const saveToolResponse = async (toolResponse: string, toolCallId: string) => {
+  await addMessages([{
+    role: 'tool',
+    content: toolResponse,
+    tool_call_id: toolCallId,
+  }]);
+};
