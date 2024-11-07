@@ -1,8 +1,8 @@
 import { addMessages, getMessages, saveToolResponse } from './memory.ts'
-import { logMessage, showLoader } from './ui.ts'
+import { logMessage } from './ui.ts'
 import { runLLm } from './llm.ts'
-import { z } from 'zod'
 import { runTool } from './toolRunner.ts'
+import { z } from 'zod'
 
 export type Tools = { name: string, parameters: z.AnyZodObject, }[];
 
